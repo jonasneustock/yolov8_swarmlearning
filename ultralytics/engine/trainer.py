@@ -33,6 +33,9 @@ from ultralytics.utils.files import get_latest_run, increment_path
 from ultralytics.utils.torch_utils import (EarlyStopping, ModelEMA, de_parallel, init_seeds, one_cycle, select_device,
                                            strip_optimizer)
 
+# Load swarm learning package
+from swarmlearning.pyt import SwarmCallback
+
 
 class BaseTrainer:
     """
@@ -267,6 +270,18 @@ class BaseTrainer:
         self.resume_training(ckpt)
         self.scheduler.last_epoch = self.start_epoch - 1  # do not move
         self.run_callbacks('on_pretrain_routine_end')
+
+        # Hook up Swarm Learning Callback
+        
+        # Add swarm learning callback
+        self.swarmCallback = SwarmCallback(syncFrequency=self.args.swarm_syncFrequency,
+                                        minPeers=self.args.swarm_minPeers,
+                                        useAdaptiveSync=False,
+                                        adsValData=self.testset,
+                                        adsValBatchSize=self.batch_size,
+                                        model=self.model)
+        
+        self.add_callback("SwarmLearning", self.swarmCallback)
 
     def _do_train(self, world_size=1):
         """Train completed, evaluate and plot if specified by arguments."""
